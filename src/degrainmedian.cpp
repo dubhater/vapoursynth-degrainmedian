@@ -22,19 +22,27 @@ static inline void checkBetterNeighbours(int a, int b, int &diff, int &min, int 
 }
 
 
-static void mode0(const uint8_t *prevp, const uint8_t *srcp, const uint8_t *nextp, uint8_t *dstp, int stride, int width, int height, int limit, int interlaced) {
+template <typename PixelType, bool norow>
+static void mode0(const uint8_t *prevp8, const uint8_t *srcp8, const uint8_t *nextp8, uint8_t *dstp8, int stride, int width, int height, int limit, int interlaced) {
+    const PixelType *prevp = (const PixelType *)prevp8;
+    const PixelType *srcp = (const PixelType *)srcp8;
+    const PixelType *nextp = (const PixelType *)nextp8;
+    PixelType *dstp = (PixelType *)dstp8;
+
+    stride /= sizeof(PixelType);
+
     const int distance = stride << interlaced;
     const int skip_rows = 1 << interlaced;
 
     // Copy first line(s).
-    memcpy(dstp, srcp, width);
+    memcpy(dstp, srcp, width * sizeof(PixelType));
     if (interlaced)
-        memcpy(dstp + stride, srcp + stride, width);
+        memcpy(dstp + stride, srcp + stride, width * sizeof(PixelType));
     prevp += distance;
     srcp += distance;
     nextp += distance;
     dstp += distance;
-    
+
     for (int y = skip_rows; y < height - skip_rows; y++) {
         dstp[0] = srcp[0];
 
@@ -80,10 +88,11 @@ static void mode0(const uint8_t *prevp, const uint8_t *srcp, const uint8_t *next
             n7 = nextp[x + distance - 1];
             n8 = nextp[x + distance];
             n9 = nextp[x + distance + 1];
-            
-            int diff = 255;
+
+            // 65535 works for any bit depth between 8 and 16.
+            int diff = 65535;
             int min = 0;
-            int max = 255;
+            int max = 65535;
 
             checkBetterNeighbours(n1, p9, diff, min, max);
             checkBetterNeighbours(n3, p7, diff, min, max);
@@ -98,7 +107,8 @@ static void mode0(const uint8_t *prevp, const uint8_t *srcp, const uint8_t *next
             checkBetterNeighbours(s1, s9, diff, min, max);
             checkBetterNeighbours(s3, s7, diff, min, max);
             checkBetterNeighbours(s2, s8, diff, min, max);
-            checkBetterNeighbours(s4, s6, diff, min, max);
+            if (!norow)
+                checkBetterNeighbours(s4, s6, diff, min, max);
 
             int result = std::max(min, std::min(s5, max));
 
@@ -114,9 +124,9 @@ static void mode0(const uint8_t *prevp, const uint8_t *srcp, const uint8_t *next
     }
     
     // Copy last line(s).
-    memcpy(dstp, srcp, width);
+    memcpy(dstp, srcp, width * sizeof(PixelType));
     if (interlaced)
-        memcpy(dstp + stride, srcp + stride, width);
+        memcpy(dstp + stride, srcp + stride, width * sizeof(PixelType));
 }
 
 
