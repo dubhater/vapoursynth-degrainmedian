@@ -22,18 +22,23 @@ static inline void checkBetterNeighbours(int a, int b, int &diff, int &min, int 
 }
 
 
-static void mode0(const uint8_t *prevp, const uint8_t *srcp, const uint8_t *nextp, uint8_t *dstp, int stride, int width, int height, int limit) {
-    // Copy first line.
+static void mode0(const uint8_t *prevp, const uint8_t *srcp, const uint8_t *nextp, uint8_t *dstp, int stride, int width, int height, int limit, int interlaced) {
+    const int distance = stride << interlaced;
+    const int skip_rows = 1 << interlaced;
+
+    // Copy first line(s).
     memcpy(dstp, srcp, width);
-    prevp += stride;
-    srcp += stride;
-    nextp += stride;
-    dstp += stride;
+    if (interlaced)
+        memcpy(dstp + stride, srcp + stride, width);
+    prevp += distance;
+    srcp += distance;
+    nextp += distance;
+    dstp += distance;
     
-    for (int y = 1; y < height - 2; y++) {
+    for (int y = skip_rows; y < height - skip_rows; y++) {
         dstp[0] = srcp[0];
 
-        for (int x = 1; x < width - 2; x++) {
+        for (int x = 1; x < width - 1; x++) {
             int p1, p2, p3,
                 p4, p5, p6,
                 p7, p8, p9;
@@ -46,35 +51,35 @@ static void mode0(const uint8_t *prevp, const uint8_t *srcp, const uint8_t *next
                 n4, n5, n6,
                 n7, n8, n9;
             
-            p1 = prevp[x - stride - 1];
-            p2 = prevp[x - stride];
-            p3 = prevp[x - stride + 1];
+            p1 = prevp[x - distance - 1];
+            p2 = prevp[x - distance];
+            p3 = prevp[x - distance + 1];
             p4 = prevp[x - 1];
             p5 = prevp[x];
             p6 = prevp[x + 1];
-            p7 = prevp[x + stride - 1];
-            p8 = prevp[x + stride];
-            p9 = prevp[x + stride + 1];
+            p7 = prevp[x + distance - 1];
+            p8 = prevp[x + distance];
+            p9 = prevp[x + distance + 1];
             
-            s1 = srcp[x - stride - 1];
-            s2 = srcp[x - stride];
-            s3 = srcp[x - stride + 1];
+            s1 = srcp[x - distance - 1];
+            s2 = srcp[x - distance];
+            s3 = srcp[x - distance + 1];
             s4 = srcp[x - 1];
             s5 = srcp[x];
             s6 = srcp[x + 1];
-            s7 = srcp[x + stride - 1];
-            s8 = srcp[x + stride];
-            s9 = srcp[x + stride + 1];
+            s7 = srcp[x + distance - 1];
+            s8 = srcp[x + distance];
+            s9 = srcp[x + distance + 1];
             
-            n1 = nextp[x - stride - 1];
-            n2 = nextp[x - stride];
-            n3 = nextp[x - stride + 1];
+            n1 = nextp[x - distance - 1];
+            n2 = nextp[x - distance];
+            n3 = nextp[x - distance + 1];
             n4 = nextp[x - 1];
             n5 = nextp[x];
             n6 = nextp[x + 1];
-            n7 = nextp[x + stride - 1];
-            n8 = nextp[x + stride];
-            n9 = nextp[x + stride + 1];
+            n7 = nextp[x + distance - 1];
+            n8 = nextp[x + distance];
+            n9 = nextp[x + distance + 1];
             
             int diff = 255;
             int min = 0;
@@ -108,8 +113,10 @@ static void mode0(const uint8_t *prevp, const uint8_t *srcp, const uint8_t *next
         dstp += stride;
     }
     
-    // Copy last line.
+    // Copy last line(s).
     memcpy(dstp, srcp, width);
+    if (interlaced)
+        memcpy(dstp + stride, srcp + stride, width);
 }
 
 
